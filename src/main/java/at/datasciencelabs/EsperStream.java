@@ -37,7 +37,7 @@ public class EsperStream<IN> {
 
         SingleOutputStreamOperator<R> patternStream;
 
-        // TODO until the typeextractor is capable of extracing non-generic parameters, the return type has to be passed in manually
+        // TODO until the type extractor is capable of extracting non-generic parameters, the return type has to be passed in manually
 
         final boolean isProcessingTime = inputStream.getExecutionEnvironment().getStreamTimeCharacteristic() == TimeCharacteristic.ProcessingTime;
         patternStream = inputStream.keyBy(keySelector).transform("SelectEsperOperator", dataStreamReturnType, new SelectEsperStreamOperator<Byte, IN, R>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery));
