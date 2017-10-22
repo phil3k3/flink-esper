@@ -15,12 +15,26 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import java.io.Serializable;
 
+/**
+ * An operator which supports detecting event sequences and patterns using Esper.
+ * @param <KEY> Type of the key
+ * @param <IN> Type of the input stream
+ * @param <OUT> Type of the output stream
+ */
 public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOperator<OUT, EsperSelectFunction<OUT>> implements OneInputStreamOperator<IN, OUT>, Triggerable<KEY, VoidNamespace>, Serializable {
 
     private final String query;
     private final TypeInformation<IN> inputType;
     private EPServiceProvider engine;
 
+    /**
+     * Constructs a new operator. Requires the type of the input DataStream to register its Event Type at Esper.
+     * Currently only processing time evaluation is supported.
+     * @param inputType
+     * @param userFunction
+     * @param isProcessingTime
+     * @param query
+     */
     public SelectEsperStreamOperator(TypeInformation<IN> inputType, EsperSelectFunction<OUT> userFunction, boolean isProcessingTime, String query) {
         super(userFunction);
         this.inputType = inputType;
