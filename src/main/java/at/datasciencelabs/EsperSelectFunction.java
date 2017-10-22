@@ -10,5 +10,5 @@ import java.io.Serializable;
  * @param <OUT> Type of the output DataStream
  */
 public interface EsperSelectFunction<OUT> extends Function, Serializable {
-    OUT select(EventBean collector) throws Exception;
+    OUT select(EventBean eventBean) throws Exception;
 }

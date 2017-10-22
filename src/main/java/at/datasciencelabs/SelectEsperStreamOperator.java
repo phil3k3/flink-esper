@@ -30,15 +30,15 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
     /**
      * Constructs a new operator. Requires the type of the input DataStream to register its Event Type at Esper.
      * Currently only processing time evaluation is supported.
-     * @param inputType
-     * @param userFunction
+     * @param inputStreamType
+     * @param esperSelectFunction
      * @param isProcessingTime
-     * @param query
+     * @param esperQuery
      */
-    public SelectEsperStreamOperator(TypeInformation<IN> inputType, EsperSelectFunction<OUT> userFunction, boolean isProcessingTime, String query) {
-        super(userFunction);
-        this.inputType = inputType;
-        this.query = query;
+    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, String esperQuery) {
+        super(esperSelectFunction);
+        this.inputType = inputStreamType;
+        this.query = esperQuery;
 
         if (!isProcessingTime) {
             throw new UnsupportedOperationException("Event-time is not supported");

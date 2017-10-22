@@ -14,33 +14,33 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
  */
 public class EsperStream<IN> {
 
-    private final DataStream<IN> input;
-    private final String query;
+    private final DataStream<IN> inputStream;
+    private final String esperQuery;
 
 
     /**
      * Create a new EsperStream instance.
-     * @param input The input DataStream
-     * @param query An Esper query
+     * @param inputStream The input DataStream
+     * @param esperQuery An Esper query
      */
-    public EsperStream(DataStream<IN> input, String query) {
-        this.input = input;
-        this.query = query;
+    public EsperStream(DataStream<IN> inputStream, String esperQuery) {
+        this.inputStream = inputStream;
+        this.esperQuery = esperQuery;
     }
 
     /**
      * Select from the EsperStream, must provide the return type of the output DataStream since no type information is
      * currently extracted from the @see {@link EsperSelectFunction}.
      */
-    public <R> SingleOutputStreamOperator<R> select(EsperSelectFunction<R> selectFunction, TypeInformation<R> returnType) {
+    public <R> SingleOutputStreamOperator<R> select(EsperSelectFunction<R> esperSelectFunction, TypeInformation<R> dataStreamReturnType) {
         KeySelector<IN, Byte> keySelector = new NullByteKeySelector<>();
 
         SingleOutputStreamOperator<R> patternStream;
 
         // TODO until the typeextractor is capable of extracing non-generic parameters, the return type has to be passed in manually
 
-        final boolean isProcessingTime = input.getExecutionEnvironment().getStreamTimeCharacteristic() == TimeCharacteristic.ProcessingTime;
-        patternStream = input.keyBy(keySelector).transform("SelectEsperOperator", returnType, new SelectEsperStreamOperator<Byte, IN, R>(input.getType(), selectFunction, isProcessingTime, query));
+        final boolean isProcessingTime = inputStream.getExecutionEnvironment().getStreamTimeCharacteristic() == TimeCharacteristic.ProcessingTime;
+        patternStream = inputStream.keyBy(keySelector).transform("SelectEsperOperator", dataStreamReturnType, new SelectEsperStreamOperator<Byte, IN, R>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery));
 
         return patternStream;
     }
