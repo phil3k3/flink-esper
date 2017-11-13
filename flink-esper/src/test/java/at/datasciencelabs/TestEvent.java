@@ -37,4 +37,12 @@ public class TestEvent {
     public int getAge() {
         return age;
     }
+
+    @Override
+    public String toString() {
+        return "TestEvent{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                '}';
+    }
 }
