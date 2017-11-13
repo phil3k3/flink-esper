@@ -92,7 +92,6 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
 
                 statement.addListener((newData, oldData) -> {
                     for (EventBean event : newData) {
-                        System.out.println(event.get("name"));
                         EsperSelectFunction<OUT> userFunction = getUserFunction();
                         try {
                             output.collect(new StreamRecord<>((userFunction.select(event))));

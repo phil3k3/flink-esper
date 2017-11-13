@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -19,11 +20,13 @@ import static org.hamcrest.core.IsNull.notNullValue;
 public class EsperStreamTest extends StreamingMultipleProgramsTestBase implements Serializable {
 
     private static List<TestEvent> result;
+    private static List<String> stringResult;
 
 
     @Before
     public void before() {
         result = new ArrayList<>();
+        stringResult = new ArrayList<>();
     }
 
     @Test
@@ -87,6 +90,37 @@ public class EsperStreamTest extends StreamingMultipleProgramsTestBase implement
 
         assertThat(result, is(notNullValue()));
         assertThat(result.size(), is(3));
+    }
+
+    @Test
+    @SuppressWarnings("Convert2Lambda")
+    public void shouldSelectFromStringDataStream() throws Exception {
+        StreamExecutionEnvironment executionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment();
+        executionEnvironment.setParallelism(1);
+
+        List<String> expectedValues = Arrays.asList("first", "second");
+        DataStream<String> dataStream = executionEnvironment.fromCollection(expectedValues);
+
+        EsperStream<String> esperStream = Esper.pattern(dataStream, "select bytes from String");
+
+        DataStream<String> resultStream = esperStream.select((EsperSelectFunction<String>) collector -> {
+            byte[] bytes = (byte[]) collector.get("bytes");
+            return new String(bytes);
+        });
+
+        resultStream.addSink(new SinkFunction<String>() {
+            @Override
+            public void invoke(String testEvent) throws Exception {
+                System.err.println(testEvent);
+                stringResult.add(testEvent);
+            }
+        });
+
+        executionEnvironment.execute("test-2");
+
+        assertThat(stringResult, is(notNullValue()));
+        assertThat(stringResult.size(), is(2));
+        assertThat(stringResult, is(expectedValues));
     }
 
 }
