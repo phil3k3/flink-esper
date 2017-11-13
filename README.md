@@ -12,7 +12,7 @@ An attempt to use Esper stream processing engine within Apache Flink as alternat
 
 ```
 git clone https://github.com/phil3k3/flink-esper.git
-flink-esper
+cd flink-esper
 mvn clean package
 ```
 
