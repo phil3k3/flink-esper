@@ -6,13 +6,13 @@ import at.datasciencelabs.EsperStream;
 import com.espertech.esper.client.EventBean;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.PrintSinkFunction;
 
 public class FlinkTestClass {
 
+    @SuppressWarnings("Convert2Lambda")
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment streamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment();
-        DataStream<String> dataStream = streamExecutionEnvironment.readTextFile("file:///tmp/flink-test");
+        DataStream<String> dataStream = streamExecutionEnvironment.readTextFile("file:///tmp/flink-esper-input");
 
         EsperStream<String> esperStream = Esper.pattern(dataStream, "select bytes from String");
 
@@ -23,9 +23,9 @@ public class FlinkTestClass {
             }
         });
 
-        result.addSink(new PrintSinkFunction<>(true));
+        result.writeAsText("file:///tmp/flink-esper-output");
 
-        streamExecutionEnvironment.execute("Kafka 0.10 Example");
+        streamExecutionEnvironment.execute("Simple Flink Esper Example");
     }
 
 }

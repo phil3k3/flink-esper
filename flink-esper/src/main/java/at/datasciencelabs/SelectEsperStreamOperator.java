@@ -1,9 +1,12 @@
 package at.datasciencelabs;
 
+import com.espertech.esper.client.Configuration;
 import com.espertech.esper.client.EPServiceProvider;
 import com.espertech.esper.client.EPServiceProviderManager;
 import com.espertech.esper.client.EPStatement;
 import com.espertech.esper.client.EventBean;
+import com.espertech.esper.client.time.CurrentTimeEvent;
+import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -70,12 +73,14 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
 
     @Override
     public void onEventTime(InternalTimer<KEY, VoidNamespace> internalTimer) throws Exception {
-        internalTimer.getTimestamp();
+        // not supported yet
     }
 
     @Override
     public void onProcessingTime(InternalTimer<KEY, VoidNamespace> internalTimer) throws Exception {
-
+        EPServiceProvider epServiceProvider = getServiceProvider(this.hashCode() + "");
+        epServiceProvider.getEPRuntime().sendEvent(new CurrentTimeSpanEvent(internalTimer.getTimestamp()));
+        this.engineState.update(epServiceProvider);
     }
 
     private EPServiceProvider getServiceProvider(String context) throws IOException {
@@ -86,8 +91,11 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
         synchronized (lock) {
             serviceProvider = engineState.value();
             if (serviceProvider == null) {
-                serviceProvider = EPServiceProviderManager.getProvider(context);
+                Configuration configuration = new Configuration();
+                configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
+                serviceProvider = EPServiceProviderManager.getProvider(context, configuration);
                 serviceProvider.getEPAdministrator().getConfiguration().addEventType(inputType.getTypeClass());
+                serviceProvider.getEPRuntime().sendEvent(new CurrentTimeEvent(0));
                 EPStatement statement = serviceProvider.getEPAdministrator().createEPL(query);
 
                 statement.addListener((newData, oldData) -> {
