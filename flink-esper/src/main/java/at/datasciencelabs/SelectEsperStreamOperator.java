@@ -30,11 +30,19 @@ import java.io.Serializable;
  */
 public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOperator<OUT, EsperSelectFunction<OUT>> implements OneInputStreamOperator<IN, OUT>, Triggerable<KEY, VoidNamespace>, Serializable {
 
-    private final String query;
-    private final TypeInformation<IN> inputType;
-    private ValueState<EPServiceProvider> engineState;
     private static final String ESPER_SERVICE_PROVIDER_STATE = "esperServiceProviderState";
+
+    /** The Esper query to execute */
+    private final String query;
+
+    /** The inferred input type of the user function */
+    private final TypeInformation<IN> inputType;
+
+    /** The lock for creating a thread-safe instance of an Esper service provider */
     private final Object lock = new Object[0];
+
+    /** The state containing the Esper engine */
+    private ValueState<EPServiceProvider> engineState;
 
     /**
      * Constructs a new operator. Requires the type of the input DataStream to register its Event Type at Esper.
