@@ -3,6 +3,10 @@ package at.datasciencelabs;
 import com.espertech.esper.client.EPServiceProvider;
 import com.espertech.esper.client.EPServiceProviderManager;
 import com.espertech.esper.client.EPStatement;
+import com.espertech.esper.event.map.MapEventBean;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class EsperTest {
