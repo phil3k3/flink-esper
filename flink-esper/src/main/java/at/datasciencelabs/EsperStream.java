@@ -22,7 +22,7 @@ import java.lang.reflect.Type;
 public class EsperStream<IN> {
 
     private final DataStream<IN> inputStream;
-    private final String esperQuery;
+    private final EsperStatementFactory esperQuery;
 
 
     /**
@@ -30,14 +30,20 @@ public class EsperStream<IN> {
      * @param inputStream The input DataStream
      * @param esperQuery An Esper query
      */
-    public EsperStream(DataStream<IN> inputStream, String esperQuery) {
+    EsperStream(DataStream<IN> inputStream, EsperStatementFactory esperQuery) {
         this.inputStream = inputStream;
         this.esperQuery = esperQuery;
     }
 
     /**
-     * Select from the EsperStream, must provide the return type of the output DataStream since no type information is
-     * currently extracted from the @see {@link EsperSelectFunction}.
+     * Applies a select function to the detected pattern sequence or query results. For each pattern sequence or query result the
+     * provided {@link EsperSelectFunction} is called. The pattern select function can produce
+     * exactly one resulting element.
+     *
+     * @param esperSelectFunction The pattern select function which is called for each detected pattern sequence.
+     * @param <R> Type of the resulting elements
+     * @return {@link DataStream} which contains the resulting elements from the pattern select
+     *         function.
      */
     public <R> SingleOutputStreamOperator<R> select(EsperSelectFunction<R> esperSelectFunction) {
         KeySelector<IN, Byte> keySelector = new NullByteKeySelector<>();

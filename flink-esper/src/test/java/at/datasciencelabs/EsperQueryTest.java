@@ -17,7 +17,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNull.notNullValue;
 
-public class EsperStreamTest extends StreamingMultipleProgramsTestBase implements Serializable {
+public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements Serializable {
 
     private static List<TestEvent> result;
     private static List<String> stringResult;
@@ -37,7 +37,7 @@ public class EsperStreamTest extends StreamingMultipleProgramsTestBase implement
 
         DataStream<TestEvent> dataStream = executionEnvironment.fromElements(new TestEvent("peter", 10), new TestEvent("alex", 25), new TestEvent("maria", 30));
 
-        EsperStream<TestEvent> esperStream = new EsperStream<>(dataStream, "select name, age from TestEvent");
+        EsperStream<TestEvent> esperStream = Esper.query(dataStream, "select name, age from TestEvent");
 
         DataStream<TestEvent> resultStream = esperStream.select(new EsperSelectFunction<TestEvent>() {
             @Override
@@ -71,7 +71,7 @@ public class EsperStreamTest extends StreamingMultipleProgramsTestBase implement
 
         DataStream<TestEvent> dataStream = executionEnvironment.fromElements(new TestEvent("peter1", 10), new TestEvent("alex1", 25), new TestEvent("maria1", 30));
 
-        EsperStream<TestEvent> esperStream = new EsperStream<>(dataStream, "select name, age from TestEvent");
+        EsperStream<TestEvent> esperStream = Esper.query(dataStream, "select name, age from TestEvent");
 
         DataStream<TestEvent> resultStream = esperStream.select((EsperSelectFunction<TestEvent>) collector -> {
             String name = (String) collector.get("name");
@@ -101,7 +101,7 @@ public class EsperStreamTest extends StreamingMultipleProgramsTestBase implement
         List<String> expectedValues = Arrays.asList("first", "second");
         DataStream<String> dataStream = executionEnvironment.fromCollection(expectedValues);
 
-        EsperStream<String> esperStream = Esper.pattern(dataStream, "select bytes from String");
+        EsperStream<String> esperStream = Esper.query(dataStream, "select bytes from String");
 
         DataStream<String> resultStream = esperStream.select((EsperSelectFunction<String>) collector -> {
             byte[] bytes = (byte[]) collector.get("bytes");

@@ -13,7 +13,7 @@ public class FlinkTestClass {
     public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment streamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment();
         DataStream<String> dataStream = streamExecutionEnvironment.readTextFile("file:///tmp/flink-esper-input");
-
+        
         EsperStream<String> esperStream = Esper.pattern(dataStream, "select bytes from String");
 
         DataStream<String> result = esperStream.select(new EsperSelectFunction<String>() {

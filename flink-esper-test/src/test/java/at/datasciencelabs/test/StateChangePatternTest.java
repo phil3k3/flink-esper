@@ -1,4 +1,4 @@
-package at.datasciencelabs;
+package at.datasciencelabs.test;
 
 import com.espertech.esper.client.EPServiceProvider;
 import com.espertech.esper.client.EPServiceProviderManager;

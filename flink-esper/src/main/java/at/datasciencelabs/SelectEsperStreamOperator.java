@@ -33,7 +33,7 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
     private static final String ESPER_SERVICE_PROVIDER_STATE = "esperServiceProviderState";
 
     /** The Esper query to execute */
-    private final String query;
+    private final EsperStatementFactory query;
 
     /** The inferred input type of the user function */
     private final TypeInformation<IN> inputType;
@@ -53,7 +53,7 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
      * @param isProcessingTime    Flag indicating how time is interpreted (processing time vs event time)
      * @param esperQuery          The esper query
      */
-    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, String esperQuery) {
+    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, EsperStatementFactory esperQuery) {
         super(esperSelectFunction);
         this.inputType = inputStreamType;
         this.query = esperQuery;
@@ -104,7 +104,7 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
                 serviceProvider = EPServiceProviderManager.getProvider(context, configuration);
                 serviceProvider.getEPAdministrator().getConfiguration().addEventType(inputType.getTypeClass());
                 serviceProvider.getEPRuntime().sendEvent(new CurrentTimeEvent(0));
-                EPStatement statement = serviceProvider.getEPAdministrator().createEPL(query);
+                EPStatement statement = query.createStatement(serviceProvider.getEPAdministrator());
 
                 statement.addListener((newData, oldData) -> {
                     for (EventBean event : newData) {
