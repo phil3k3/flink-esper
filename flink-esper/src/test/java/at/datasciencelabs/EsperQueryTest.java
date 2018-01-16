@@ -19,6 +19,7 @@ import static org.hamcrest.core.IsNull.notNullValue;
 
 public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements Serializable {
 
+    private static final long serialVersionUID = 3151045298871771992L;
     private static List<TestEvent> result;
     private static List<String> stringResult;
 
@@ -40,6 +41,8 @@ public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements
         EsperStream<TestEvent> esperStream = Esper.query(dataStream, "select name, age from TestEvent");
 
         DataStream<TestEvent> resultStream = esperStream.select(new EsperSelectFunction<TestEvent>() {
+            private static final long serialVersionUID = 8802852465465541287L;
+
             @Override
             public TestEvent select(EventBean eventBean) throws Exception {
                 String name = (String) eventBean.get("name");
@@ -49,6 +52,9 @@ public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements
         });
 
         resultStream.addSink(new SinkFunction<TestEvent>() {
+
+            private static final long serialVersionUID = -8260794084029816089L;
+
             @Override
             public void invoke(TestEvent testEvent) throws Exception {
                 System.err.println(testEvent);
@@ -80,6 +86,9 @@ public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements
         });
 
         resultStream.addSink(new SinkFunction<TestEvent>() {
+
+            private static final long serialVersionUID = 5588530728493738002L;
+
             @Override
             public void invoke(TestEvent testEvent) throws Exception {
                 result.add(testEvent);
@@ -109,6 +118,9 @@ public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements
         });
 
         resultStream.addSink(new SinkFunction<String>() {
+
+            private static final long serialVersionUID = 284955963055337762L;
+
             @Override
             public void invoke(String testEvent) throws Exception {
                 System.err.println(testEvent);

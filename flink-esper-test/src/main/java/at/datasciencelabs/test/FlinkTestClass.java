@@ -17,6 +17,8 @@ public class FlinkTestClass {
         EsperStream<String> esperStream = Esper.pattern(dataStream, "select bytes from String");
 
         DataStream<String> result = esperStream.select(new EsperSelectFunction<String>() {
+            private static final long serialVersionUID = 7093943872082195786L;
+
             @Override
             public String select(EventBean eventBean) throws Exception {
                 return new String((byte[]) eventBean.get("bytes"));

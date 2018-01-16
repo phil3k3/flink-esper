@@ -11,6 +11,8 @@ import java.io.IOException;
 
 public class EsperEngineSerializer extends TypeSerializer<EPServiceProvider> {
 
+    private static final long serialVersionUID = -5523322497977330283L;
+
     @Override
     public boolean isImmutableType() {
         return false;
