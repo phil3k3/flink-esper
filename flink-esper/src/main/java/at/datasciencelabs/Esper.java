@@ -18,8 +18,9 @@ public class Esper {
      * @return Resulting esper stream
      */
     public static <IN> EsperStream<IN> pattern(DataStream<IN> input, String pattern) {
-        return new EsperStream<IN>(input, new EsperPattern(pattern));
+        return new EsperStream<>(input, new EsperPattern(pattern));
     }
+
 
     /**
      * Creates a {@link EsperStream} from an input data stream and a query.
@@ -30,6 +31,6 @@ public class Esper {
      * @return Resulting esper stream
      */
     public static <IN> EsperStream<IN> query(DataStream<IN> input, String query) {
-        return new EsperStream<IN>(input, new EsperQuery(query));
+        return new EsperStream<>(input, new EsperQuery(query));
     }
 }
