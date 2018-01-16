@@ -1,9 +1,12 @@
 package at.datasciencelabs;
 
+import com.espertech.esper.client.Configuration;
 import com.espertech.esper.client.EPServiceProvider;
 import com.espertech.esper.client.EPServiceProviderManager;
 import com.espertech.esper.client.EPStatement;
 import com.espertech.esper.client.EventBean;
+import com.espertech.esper.client.time.CurrentTimeEvent;
+import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -27,11 +30,19 @@ import java.io.Serializable;
  */
 public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOperator<OUT, EsperSelectFunction<OUT>> implements OneInputStreamOperator<IN, OUT>, Triggerable<KEY, VoidNamespace>, Serializable {
 
-    private final String query;
-    private final TypeInformation<IN> inputType;
-    private ValueState<EPServiceProvider> engineState;
     private static final String ESPER_SERVICE_PROVIDER_STATE = "esperServiceProviderState";
+
+    /** The Esper query to execute */
+    private final EsperStatementFactory query;
+
+    /** The inferred input type of the user function */
+    private final TypeInformation<IN> inputType;
+
+    /** The lock for creating a thread-safe instance of an Esper service provider */
     private final Object lock = new Object[0];
+
+    /** The state containing the Esper engine */
+    private ValueState<EPServiceProvider> engineState;
 
     /**
      * Constructs a new operator. Requires the type of the input DataStream to register its Event Type at Esper.
@@ -42,7 +53,7 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
      * @param isProcessingTime    Flag indicating how time is interpreted (processing time vs event time)
      * @param esperQuery          The esper query
      */
-    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, String esperQuery) {
+    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, EsperStatementFactory esperQuery) {
         super(esperSelectFunction);
         this.inputType = inputStreamType;
         this.query = esperQuery;
@@ -70,12 +81,14 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
 
     @Override
     public void onEventTime(InternalTimer<KEY, VoidNamespace> internalTimer) throws Exception {
-        internalTimer.getTimestamp();
+        // not supported yet
     }
 
     @Override
     public void onProcessingTime(InternalTimer<KEY, VoidNamespace> internalTimer) throws Exception {
-
+        EPServiceProvider epServiceProvider = getServiceProvider(this.hashCode() + "");
+        epServiceProvider.getEPRuntime().sendEvent(new CurrentTimeSpanEvent(internalTimer.getTimestamp()));
+        this.engineState.update(epServiceProvider);
     }
 
     private EPServiceProvider getServiceProvider(String context) throws IOException {
@@ -86,9 +99,12 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
         synchronized (lock) {
             serviceProvider = engineState.value();
             if (serviceProvider == null) {
-                serviceProvider = EPServiceProviderManager.getProvider(context);
+                Configuration configuration = new Configuration();
+                configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
+                serviceProvider = EPServiceProviderManager.getProvider(context, configuration);
                 serviceProvider.getEPAdministrator().getConfiguration().addEventType(inputType.getTypeClass());
-                EPStatement statement = serviceProvider.getEPAdministrator().createEPL(query);
+                serviceProvider.getEPRuntime().sendEvent(new CurrentTimeEvent(0));
+                EPStatement statement = query.createStatement(serviceProvider.getEPAdministrator());
 
                 statement.addListener((newData, oldData) -> {
                     for (EventBean event : newData) {
