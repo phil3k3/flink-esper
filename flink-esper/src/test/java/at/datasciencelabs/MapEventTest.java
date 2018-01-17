@@ -47,7 +47,7 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 		List<MapEvent> events = Arrays.asList(mapStartedEvent, mapFinishedEvent);
 		DataStream<MapEvent> dataStream = executionEnvironment.fromCollection(events);
 
-		EsperStream<MapEvent> eventEsperStream = Esper.query(dataStream, "create schema BuildStartedEvent as (project string, buildId int)\ncreate schema BuildFinishedEvent as (project string, buildId int)");
+		EsperStream<MapEvent> eventEsperStream = Esper.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project=A.project))");
 
 		DataStream<ComplexEvent> complexEventDataStream = eventEsperStream.select(new EsperSelectFunction<ComplexEvent>() {
 			private static final long serialVersionUID = -3360216854308757573L;

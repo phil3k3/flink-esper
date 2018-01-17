@@ -5,6 +5,7 @@ import com.espertech.esper.client.EPServiceProvider;
 import com.espertech.esper.client.EPServiceProviderManager;
 import com.espertech.esper.client.EPStatement;
 import com.espertech.esper.client.EventBean;
+import com.espertech.esper.client.EventSender;
 import com.espertech.esper.client.time.CurrentTimeEvent;
 import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import org.apache.flink.api.common.state.ValueState;
@@ -20,6 +21,8 @@ import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * An operator which supports detecting event sequences and patterns using Esper.
@@ -100,10 +103,20 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
             serviceProvider = engineState.value();
             if (serviceProvider == null) {
                 Configuration configuration = new Configuration();
+                try {
+                    configuration.addPlugInEventRepresentation(new URI("type://xml/generic/Test"), GenericPluginEventPresentation.class, null);
+                    URI[] resolveURIs = new URI[] {new URI("type://xml/generic/Test")};
+                    configuration.setPlugInEventTypeResolutionURIs(resolveURIs);
+                } catch (URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+
                 configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
                 serviceProvider = EPServiceProviderManager.getProvider(context, configuration);
                 serviceProvider.getEPAdministrator().getConfiguration().addEventType(inputType.getTypeClass());
                 serviceProvider.getEPRuntime().sendEvent(new CurrentTimeEvent(0));
+
+
                 EPStatement statement = query.createStatement(serviceProvider.getEPAdministrator());
 
                 statement.addListener((newData, oldData) -> {

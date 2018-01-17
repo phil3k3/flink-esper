@@ -21,7 +21,7 @@ public class StateChangePatternTest {
 
     private EPServiceProvider engine;
 
-    private static final String STATE_CHANGE_PATTERN = "(every(A=BuildSuccess) -> (B=BuildFailure(project=A.project) and not A=BuildSuccess))";
+    private static final String STATE_CHANGE_PATTERN = "every(A=BuildSuccess) -> (B=BuildFailure(project=A.project) and not A=BuildSuccess)";
 
     private EventBuilder eventsBuilder;
 
