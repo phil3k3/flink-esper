@@ -1,6 +1,8 @@
 package at.datasciencelabs;
 
 import java.io.Serializable;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,6 +15,7 @@ import org.junit.Test;
 import com.espertech.esper.client.EventBean;
 import com.google.common.collect.Lists;
 
+import at.datasciencelabs.mapping.EsperTypeMapping;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -47,18 +50,39 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 		List<MapEvent> events = Arrays.asList(mapStartedEvent, mapFinishedEvent);
 		DataStream<MapEvent> dataStream = executionEnvironment.fromCollection(events);
 
-		EsperStream<MapEvent> eventEsperStream = Esper.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project=A.project))");
+		EsperStream<MapEvent> eventEsperStream = Esper
+				.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project='myProject'))")
+				.withMapping(new EsperTypeMapping() {
+
+					private static final long serialVersionUID = 1776871326959150128L;
+
+					@Override
+					public Class getEventRepresentationClass() {
+						return GenericPluginEventPresentation.class;
+					}
+
+					@Override
+					public URI getEventUri() {
+						try {
+							return new URI("type://mytype/Test");
+						} catch (URISyntaxException e) {
+							throw new RuntimeException(e);
+						}
+					}
+				});
 
 		DataStream<ComplexEvent> complexEventDataStream = eventEsperStream.select(new EsperSelectFunction<ComplexEvent>() {
 			private static final long serialVersionUID = -3360216854308757573L;
+
 			@Override
 			public ComplexEvent select(EventBean eventBean) throws Exception {
-				return new ComplexEvent((MapEvent)eventBean.get("A"), (MapEvent)eventBean.get("B"));
+				return new ComplexEvent((MapEvent) eventBean.get("A"), (MapEvent) eventBean.get("B"));
 			}
 		});
 
 		complexEventDataStream.addSink(new SinkFunction<ComplexEvent>() {
 			private static final long serialVersionUID = -5697228152418028480L;
+
 			@Override
 			public void invoke(ComplexEvent value) throws Exception {
 				System.err.println(value);

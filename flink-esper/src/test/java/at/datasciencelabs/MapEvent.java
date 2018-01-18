@@ -3,6 +3,7 @@ package at.datasciencelabs;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class MapEvent implements Serializable {
 
@@ -12,6 +13,7 @@ public class MapEvent implements Serializable {
 	private String type;
 
 	public MapEvent(String type) {
+		Objects.requireNonNull(type);
 		this.type = type;
 	}
 
@@ -37,5 +39,29 @@ public class MapEvent implements Serializable {
 
 	public void put(String buildId, Object value) {
 		this.values.put(buildId, value);
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		MapEvent mapEvent = (MapEvent) o;
+
+		if (!values.equals(mapEvent.values)) {
+			return false;
+		}
+		return type.equals(mapEvent.type);
+	}
+
+	@Override
+	public int hashCode() {
+		int result = values.hashCode();
+		result = 31 * result + type.hashCode();
+		return result;
 	}
 }

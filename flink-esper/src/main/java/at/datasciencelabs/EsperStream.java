@@ -14,6 +14,8 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 
 import java.lang.reflect.Type;
 
+import at.datasciencelabs.mapping.EsperTypeMapping;
+
 
 /**
  * A DataStream which is able to detect event sequences and patterns using Esper
@@ -23,6 +25,7 @@ public class EsperStream<IN> {
 
     private final DataStream<IN> inputStream;
     private final EsperStatementFactory esperQuery;
+    private EsperTypeMapping esperTypeMapping;
 
 
     /**
@@ -53,7 +56,7 @@ public class EsperStream<IN> {
         TypeInformation<R> typeInformation = getTypeInformation(esperSelectFunction);
 
         final boolean isProcessingTime = inputStream.getExecutionEnvironment().getStreamTimeCharacteristic() == TimeCharacteristic.ProcessingTime;
-        patternStream = inputStream.keyBy(keySelector).transform("SelectEsperOperator", typeInformation, new SelectEsperStreamOperator<Byte, IN, R>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery));
+        patternStream = inputStream.keyBy(keySelector).transform("SelectEsperOperator", typeInformation, new SelectEsperStreamOperator<Byte, IN, R>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery, esperTypeMapping));
 
         return patternStream;
     }
@@ -77,4 +80,8 @@ public class EsperStream<IN> {
         }
     }
 
+    public EsperStream<IN> withMapping(EsperTypeMapping esperTypeMapping) {
+        this.esperTypeMapping = esperTypeMapping;
+        return this;
+    }
 }
