@@ -30,7 +30,6 @@ public class GenericPluginEventPresentation implements PlugInEventRepresentation
 	public void init(PlugInEventRepresentationContext eventRepresentationContext) {
 		eventTypes.put("BuildStartedEvent", new BuildEventType("BuildStartedEvent"));
 		eventTypes.put("BuildFinishedEvent", new BuildEventType("BuildFinishedEvent"));
-		eventRepresentationContext.getEventAdapterService();
 	}
 
 	@Override

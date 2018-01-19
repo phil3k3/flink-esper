@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class MapEvent implements Serializable {
+import at.datasciencelabs.mapping.Typed;
+
+public class MapEvent implements Serializable, Typed {
 
 	private static final long serialVersionUID = -4656051573542193337L;
 

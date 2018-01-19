@@ -1,9 +1,9 @@
 package at.datasciencelabs.mapping;
 
 import java.io.Serializable;
-import java.net.URI;
+import java.util.Map;
+import org.apache.avro.Schema;
 
 public interface EsperTypeMapping extends Serializable {
-	Class getEventRepresentationClass();
-	URI getEventUri();
+	Map<String, Schema> getEventTypes();
 }

@@ -1,5 +1,6 @@
 package at.datasciencelabs;
 
+import java.lang.reflect.Type;
 import org.apache.flink.api.common.functions.InvalidTypesException;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -12,8 +13,6 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 
-import java.lang.reflect.Type;
-
 import at.datasciencelabs.mapping.EsperTypeMapping;
 
 
@@ -23,8 +22,9 @@ import at.datasciencelabs.mapping.EsperTypeMapping;
  */
 public class EsperStream<IN> {
 
-    private final DataStream<IN> inputStream;
-    private final EsperStatementFactory esperQuery;
+    final DataStream<IN> inputStream;
+    final EsperStatementFactory esperQuery;
+
     private EsperTypeMapping esperTypeMapping;
 
 
@@ -56,9 +56,14 @@ public class EsperStream<IN> {
         TypeInformation<R> typeInformation = getTypeInformation(esperSelectFunction);
 
         final boolean isProcessingTime = inputStream.getExecutionEnvironment().getStreamTimeCharacteristic() == TimeCharacteristic.ProcessingTime;
-        patternStream = inputStream.keyBy(keySelector).transform("SelectEsperOperator", typeInformation, new SelectEsperStreamOperator<Byte, IN, R>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery, esperTypeMapping));
+        SelectEsperStreamOperator<Byte, IN, R> operator = getOperator(esperSelectFunction, isProcessingTime);
+        patternStream = inputStream.keyBy(keySelector).transform("SelectEsperOperator", typeInformation, operator);
 
         return patternStream;
+    }
+
+    protected <R> SelectEsperStreamOperator<Byte, IN, R> getOperator(EsperSelectFunction<R> esperSelectFunction, boolean isProcessingTime) {
+        return new SelectEsperStreamOperator<>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery);
     }
 
     @SuppressWarnings("unchecked")
@@ -78,10 +83,5 @@ public class EsperStream<IN> {
         } catch (TypeExtractionException e) {
             throw new InvalidTypesException("Could not extract types.", e);
         }
-    }
-
-    public EsperStream<IN> withMapping(EsperTypeMapping esperTypeMapping) {
-        this.esperTypeMapping = esperTypeMapping;
-        return this;
     }
 }

@@ -1,13 +1,7 @@
 package at.datasciencelabs;
 
-import com.espertech.esper.client.Configuration;
-import com.espertech.esper.client.EPServiceProvider;
-import com.espertech.esper.client.EPServiceProviderManager;
-import com.espertech.esper.client.EPStatement;
-import com.espertech.esper.client.EventBean;
-import com.espertech.esper.client.EventSender;
-import com.espertech.esper.client.time.CurrentTimeEvent;
-import com.espertech.esper.client.time.CurrentTimeSpanEvent;
+import java.io.IOException;
+import java.io.Serializable;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -18,15 +12,13 @@ import org.apache.flink.streaming.api.operators.InternalTimer;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
 import org.apache.flink.streaming.api.operators.Triggerable;
 import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
-
-import java.io.IOException;
-import java.io.Serializable;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Optional;
-import java.util.function.Consumer;
-
-import at.datasciencelabs.mapping.EsperTypeMapping;
+import com.espertech.esper.client.Configuration;
+import com.espertech.esper.client.EPServiceProvider;
+import com.espertech.esper.client.EPServiceProviderManager;
+import com.espertech.esper.client.EPStatement;
+import com.espertech.esper.client.EventBean;
+import com.espertech.esper.client.time.CurrentTimeEvent;
+import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 
 /**
  * An operator which supports detecting event sequences and patterns using Esper.
@@ -38,12 +30,10 @@ import at.datasciencelabs.mapping.EsperTypeMapping;
 public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOperator<OUT, EsperSelectFunction<OUT>> implements OneInputStreamOperator<IN, OUT>, Triggerable<KEY, VoidNamespace>, Serializable {
 
     private static final String ESPER_SERVICE_PROVIDER_STATE = "esperServiceProviderState";
+    private static final long serialVersionUID = -8514539074806064248L;
 
     /** The Esper query to execute */
     private final EsperStatementFactory query;
-
-    /** Optional type mapping to override the default POJO mapping */
-    private final EsperTypeMapping esperTypeMapping;
 
     /** The inferred input type of the user function */
     private final TypeInformation<IN> inputType;
@@ -57,17 +47,15 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
     /**
      * Constructs a new operator. Requires the type of the input DataStream to register its Event Type at Esper.
      * Currently only processing time evaluation is supported.
-     *  @param inputStreamType     type of the input DataStream
+     * @param inputStreamType     type of the input DataStream
      * @param esperSelectFunction function to select from Esper's output
      * @param isProcessingTime    Flag indicating how time is interpreted (processing time vs event time)
      * @param esperQuery          The esper query
-     * @param esperTypeMapping
      */
-    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, EsperStatementFactory esperQuery, EsperTypeMapping esperTypeMapping) {
+    public SelectEsperStreamOperator(TypeInformation<IN> inputStreamType, EsperSelectFunction<OUT> esperSelectFunction, boolean isProcessingTime, EsperStatementFactory esperQuery) {
         super(esperSelectFunction);
         this.inputType = inputStreamType;
         this.query = esperQuery;
-        this.esperTypeMapping = esperTypeMapping;
 
         if (!isProcessingTime) {
             throw new UnsupportedOperationException("Event-time is not supported");
@@ -86,15 +74,12 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
     @Override
     public void processElement(StreamRecord<IN> streamRecord) throws Exception {
         EPServiceProvider esperServiceProvider = getServiceProvider(this.hashCode() + "");
-        if (esperTypeMapping != null) {
-			URI[] resolveURIs = new URI[] {esperTypeMapping.getEventUri()};
-			EventSender eventSender = esperServiceProvider.getEPRuntime().getEventSender(resolveURIs);
-			eventSender.sendEvent(streamRecord.getValue());
-		}
-		else {
-        	esperServiceProvider.getEPRuntime().sendEvent(streamRecord.getValue());
-		}
+        sendEvent(streamRecord, esperServiceProvider);
         this.engineState.update(esperServiceProvider);
+    }
+
+    protected void sendEvent(StreamRecord<IN> streamRecord, EPServiceProvider serviceProvider) {
+        serviceProvider.getEPRuntime().sendEvent(streamRecord.getValue());
     }
 
     @Override
@@ -118,13 +103,11 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
             serviceProvider = engineState.value();
             if (serviceProvider == null) {
                 Configuration configuration = new Configuration();
-                if (esperTypeMapping != null) {
-                    configuration.addPlugInEventRepresentation(esperTypeMapping.getEventUri(), esperTypeMapping.getEventRepresentationClass(), null);
-                    URI[] resolveURIs = new URI[] {esperTypeMapping.getEventUri()};
-                    configuration.setPlugInEventTypeResolutionURIs(resolveURIs);
-                }
+
                 configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
                 serviceProvider = EPServiceProviderManager.getProvider(context, configuration);
+                internalSetupServiceProvider(serviceProvider);
+
                 serviceProvider.getEPAdministrator().getConfiguration().addEventType(inputType.getTypeClass());
                 serviceProvider.getEPRuntime().sendEvent(new CurrentTimeEvent(0));
 
@@ -148,5 +131,8 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
                 return engineState.value();
             }
         }
+    }
+
+    protected void internalSetupServiceProvider(EPServiceProvider serviceProvider) {
     }
 }

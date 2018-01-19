@@ -1,11 +1,13 @@
 package at.datasciencelabs;
 
 import java.io.Serializable;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
@@ -16,6 +18,7 @@ import com.espertech.esper.client.EventBean;
 import com.google.common.collect.Lists;
 
 import at.datasciencelabs.mapping.EsperTypeMapping;
+import static org.apache.avro.SchemaBuilder.record;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -32,11 +35,23 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 
 	@Test
 	public void shouldSupportFlattenedMapEvents() throws Exception {
-		MapEvent mapStartedEvent = new MapEvent("BuildStartedEvent");
+		Map<String, Schema> types = new HashMap<>();
+		Schema started = record("BuildStartedEvent").fields()
+				.requiredString("project")
+				.requiredInt("buildId")
+				.endRecord();
+		Schema finished = record("BuildFinishedEvent").fields()
+				.requiredString("project")
+				.requiredInt("buildId")
+				.endRecord();
+		types.put("BuildStartedEvent", started);
+		types.put("BuildFinishedEvent", finished);
+
+		GenericData.Record mapStartedEvent = new GenericData.Record(started);
 		mapStartedEvent.put("project", "myProject");
 		mapStartedEvent.put("buildId", 1);
 
-		MapEvent mapFinishedEvent = new MapEvent("BuildFinishedEvent");
+		GenericData.Record mapFinishedEvent = new GenericData.Record(finished);
 		mapFinishedEvent.put("project", "myProject");
 		mapFinishedEvent.put("buildId", 1);
 
@@ -47,36 +62,19 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 		StreamExecutionEnvironment executionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment();
 		executionEnvironment.setParallelism(1);
 
-		List<MapEvent> events = Arrays.asList(mapStartedEvent, mapFinishedEvent);
-		DataStream<MapEvent> dataStream = executionEnvironment.fromCollection(events);
+		List<GenericData.Record> events = Arrays.asList(mapStartedEvent, mapFinishedEvent);
+		DataStream<GenericData.Record> dataStream = executionEnvironment.fromCollection(events);
 
-		EsperStream<MapEvent> eventEsperStream = Esper
-				.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project='myProject'))")
-				.withMapping(new EsperTypeMapping() {
-
-					private static final long serialVersionUID = 1776871326959150128L;
-
-					@Override
-					public Class getEventRepresentationClass() {
-						return GenericPluginEventPresentation.class;
-					}
-
-					@Override
-					public URI getEventUri() {
-						try {
-							return new URI("type://mytype/Test");
-						} catch (URISyntaxException e) {
-							throw new RuntimeException(e);
-						}
-					}
-				});
+		EsperTypeMapping typeMapping = (EsperTypeMapping) () -> types;
+		EsperStream<GenericData.Record> eventEsperStream = Esper
+				.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project='myProject'))", typeMapping);
 
 		DataStream<ComplexEvent> complexEventDataStream = eventEsperStream.select(new EsperSelectFunction<ComplexEvent>() {
 			private static final long serialVersionUID = -3360216854308757573L;
 
 			@Override
 			public ComplexEvent select(EventBean eventBean) throws Exception {
-				return new ComplexEvent((MapEvent) eventBean.get("A"), (MapEvent) eventBean.get("B"));
+				return new ComplexEvent((GenericData.Record) eventBean.get("A"), (GenericData.Record) eventBean.get("B"));
 			}
 		});
 
@@ -96,19 +94,19 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 	}
 
 	private static class ComplexEvent {
-		private MapEvent startEvent;
-		private MapEvent endEvent;
+		private GenericData.Record startEvent;
+		private GenericData.Record endEvent;
 
-		ComplexEvent(MapEvent startEvent, MapEvent endEvent) {
+		ComplexEvent(GenericData.Record startEvent, GenericData.Record endEvent) {
 			this.startEvent = startEvent;
 			this.endEvent = endEvent;
 		}
 
-		MapEvent getStartEvent() {
+		GenericData.Record getStartEvent() {
 			return startEvent;
 		}
 
-		MapEvent getEndEvent() {
+		GenericData.Record getEndEvent() {
 			return endEvent;
 		}
 
