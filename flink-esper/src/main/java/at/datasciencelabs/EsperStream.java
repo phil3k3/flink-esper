@@ -13,8 +13,6 @@ import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 
-import at.datasciencelabs.mapping.EsperTypeMapping;
-
 
 /**
  * A DataStream which is able to detect event sequences and patterns using Esper
@@ -24,9 +22,6 @@ public class EsperStream<IN> {
 
     final DataStream<IN> inputStream;
     final EsperStatementFactory esperQuery;
-
-    private EsperTypeMapping esperTypeMapping;
-
 
     /**
      * Create a new EsperStream instance.
@@ -62,6 +57,13 @@ public class EsperStream<IN> {
         return patternStream;
     }
 
+    /**
+     * Create a new operator processing Esper streams
+     * @param esperSelectFunction The select function
+     * @param isProcessingTime True if processing time should be used
+     * @param <R> The type of the data stream
+     * @return A {@link SelectEsperStreamOperator} which processes esper streams using a select function
+     */
     protected <R> SelectEsperStreamOperator<Byte, IN, R> getOperator(EsperSelectFunction<R> esperSelectFunction, boolean isProcessingTime) {
         return new SelectEsperStreamOperator<>(inputStream.getType(), esperSelectFunction, isProcessingTime, esperQuery);
     }

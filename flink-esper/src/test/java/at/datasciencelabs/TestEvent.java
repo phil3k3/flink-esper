@@ -7,7 +7,7 @@ public class TestEvent {
     private String name;
     private int age;
 
-    public TestEvent(String name, int age) {
+    TestEvent(String name, int age) {
         Objects.requireNonNull(name);
         this.name = name;
         this.age = age;

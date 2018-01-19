@@ -1,11 +1,7 @@
 package at.datasciencelabs;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.espertech.esper.client.EventBean;
+import com.google.common.collect.Lists;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -14,38 +10,45 @@ import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.util.StreamingMultipleProgramsTestBase;
 import org.junit.Before;
 import org.junit.Test;
-import com.espertech.esper.client.EventBean;
-import com.google.common.collect.Lists;
 
-import at.datasciencelabs.mapping.EsperTypeMapping;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
 import static org.apache.avro.SchemaBuilder.record;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
-public class MapEventTest extends StreamingMultipleProgramsTestBase implements Serializable {
+public class AvroEventTest extends StreamingMultipleProgramsTestBase implements Serializable {
 
 	private static final long serialVersionUID = 8056096050139940300L;
 
 	private static List<ComplexEvent> resultingEvents;
+	private static Schema started;
+	private static Schema finished;
+	private static HashMap<String,Schema> types;
 
 	@Before
 	public void setUp() throws Exception {
 		resultingEvents = new ArrayList<>();
+		started = record("BuildStartedEvent").fields()
+				.requiredString("project")
+				.requiredInt("buildId")
+				.endRecord();
+		finished = record("BuildFinishedEvent").fields()
+				.requiredString("project")
+				.requiredInt("buildId")
+				.endRecord();
+		types = new HashMap<>();
+
+		types.put("BuildStartedEvent", started);
+		types.put("BuildFinishedEvent", finished);
 	}
 
 	@Test
 	public void shouldSupportFlattenedMapEvents() throws Exception {
-		Map<String, Schema> types = new HashMap<>();
-		Schema started = record("BuildStartedEvent").fields()
-				.requiredString("project")
-				.requiredInt("buildId")
-				.endRecord();
-		Schema finished = record("BuildFinishedEvent").fields()
-				.requiredString("project")
-				.requiredInt("buildId")
-				.endRecord();
-		types.put("BuildStartedEvent", started);
-		types.put("BuildFinishedEvent", finished);
 
 		GenericData.Record mapStartedEvent = new GenericData.Record(started);
 		mapStartedEvent.put("project", "myProject");
@@ -65,9 +68,9 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 		List<GenericData.Record> events = Arrays.asList(mapStartedEvent, mapFinishedEvent);
 		DataStream<GenericData.Record> dataStream = executionEnvironment.fromCollection(events);
 
-		EsperTypeMapping typeMapping = (EsperTypeMapping) () -> types;
+		SchemaProvider schemaProvider = (SchemaProvider) () -> types;
 		EsperStream<GenericData.Record> eventEsperStream = Esper
-				.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project='myProject'))", typeMapping);
+				.pattern(dataStream, "every(A=BuildStartedEvent(project='myProject')) -> (B=BuildFinishedEvent(project=A.project))", schemaProvider);
 
 		DataStream<ComplexEvent> complexEventDataStream = eventEsperStream.select(new EsperSelectFunction<ComplexEvent>() {
 			private static final long serialVersionUID = -3360216854308757573L;
@@ -102,14 +105,6 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 			this.endEvent = endEvent;
 		}
 
-		GenericData.Record getStartEvent() {
-			return startEvent;
-		}
-
-		GenericData.Record getEndEvent() {
-			return endEvent;
-		}
-
 		@Override
 		public boolean equals(Object o) {
 			if (this == o) {
@@ -121,10 +116,7 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 
 			ComplexEvent that = (ComplexEvent) o;
 
-			if (!startEvent.equals(that.startEvent)) {
-				return false;
-			}
-			return endEvent.equals(that.endEvent);
+			return startEvent.equals(that.startEvent) && endEvent.equals(that.endEvent);
 		}
 
 		@Override
@@ -134,6 +126,4 @@ public class MapEventTest extends StreamingMultipleProgramsTestBase implements S
 			return result;
 		}
 	}
-
-
 }

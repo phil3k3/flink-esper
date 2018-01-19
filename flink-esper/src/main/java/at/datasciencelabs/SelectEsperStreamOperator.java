@@ -2,6 +2,9 @@ package at.datasciencelabs;
 
 import java.io.IOException;
 import java.io.Serializable;
+
+import com.espertech.esper.client.ConfigurationOperations;
+import com.espertech.esper.client.EPRuntime;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -32,21 +35,30 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
     private static final String ESPER_SERVICE_PROVIDER_STATE = "esperServiceProviderState";
     private static final long serialVersionUID = -8514539074806064248L;
 
-    /** The Esper query to execute */
+    /**
+     * The Esper query to execute
+     */
     private final EsperStatementFactory query;
 
-    /** The inferred input type of the user function */
+    /**
+     * The inferred input type of the user function
+     */
     private final TypeInformation<IN> inputType;
 
-    /** The lock for creating a thread-safe instance of an Esper service provider */
+    /**
+     * The lock for creating a thread-safe instance of an Esper service provider
+     */
     private final Object lock = new Object[0];
 
-    /** The state containing the Esper engine */
+    /**
+     * The state containing the Esper engine
+     */
     private ValueState<EPServiceProvider> engineState;
 
     /**
      * Constructs a new operator. Requires the type of the input DataStream to register its Event Type at Esper.
      * Currently only processing time evaluation is supported.
+     *
      * @param inputStreamType     type of the input DataStream
      * @param esperSelectFunction function to select from Esper's output
      * @param isProcessingTime    Flag indicating how time is interpreted (processing time vs event time)
@@ -74,12 +86,8 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
     @Override
     public void processElement(StreamRecord<IN> streamRecord) throws Exception {
         EPServiceProvider esperServiceProvider = getServiceProvider(this.hashCode() + "");
-        sendEvent(streamRecord, esperServiceProvider);
+        sendEvent(streamRecord, esperServiceProvider.getEPRuntime());
         this.engineState.update(esperServiceProvider);
-    }
-
-    protected void sendEvent(StreamRecord<IN> streamRecord, EPServiceProvider serviceProvider) {
-        serviceProvider.getEPRuntime().sendEvent(streamRecord.getValue());
     }
 
     @Override
@@ -94,6 +102,24 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
         this.engineState.update(epServiceProvider);
     }
 
+    /**
+     * Configures the Esper context.
+     *
+     * @param configurationOperations The configuration which will be extended.
+     */
+    protected void configure(ConfigurationOperations configurationOperations) {
+    }
+
+    /**
+     * Send an event to the Esper runtime.
+     *
+     * @param streamRecord The record containing the event which will be sent
+     * @param runtime      The target runtime
+     */
+    protected void sendEvent(StreamRecord<IN> streamRecord, EPRuntime runtime) {
+        runtime.sendEvent(streamRecord.getValue());
+    }
+
     private EPServiceProvider getServiceProvider(String context) throws IOException {
         EPServiceProvider serviceProvider = engineState.value();
         if (serviceProvider != null) {
@@ -103,10 +129,10 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
             serviceProvider = engineState.value();
             if (serviceProvider == null) {
                 Configuration configuration = new Configuration();
+                configure(configuration);
 
                 configuration.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
                 serviceProvider = EPServiceProviderManager.getProvider(context, configuration);
-                internalSetupServiceProvider(serviceProvider);
 
                 serviceProvider.getEPAdministrator().getConfiguration().addEventType(inputType.getTypeClass());
                 serviceProvider.getEPRuntime().sendEvent(new CurrentTimeEvent(0));
@@ -131,8 +157,5 @@ public class SelectEsperStreamOperator<KEY, IN, OUT> extends AbstractUdfStreamOp
                 return engineState.value();
             }
         }
-    }
-
-    protected void internalSetupServiceProvider(EPServiceProvider serviceProvider) {
     }
 }
