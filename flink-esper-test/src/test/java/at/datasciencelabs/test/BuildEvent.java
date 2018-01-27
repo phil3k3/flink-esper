@@ -1,5 +1,5 @@
 package at.datasciencelabs.test;
 
-
-interface BuildEvent {
+@SuppressWarnings("WeakerAccess")
+public interface BuildEvent {
 }

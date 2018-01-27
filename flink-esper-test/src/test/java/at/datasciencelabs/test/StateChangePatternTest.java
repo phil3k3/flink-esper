@@ -132,7 +132,7 @@ public class StateChangePatternTest {
         Assert.assertEquals(expectedBuildEvents, actualBuildEvents);
     }
 
-    private class ExpectedBuildFailure extends BuildFailure implements Expected {
+    public class ExpectedBuildFailure extends BuildFailure implements Expected {
 
         private final String key;
 
@@ -147,7 +147,7 @@ public class StateChangePatternTest {
         }
     }
 
-    private class ExpectedBuildSuccess extends BuildSuccess implements Expected {
+    public class ExpectedBuildSuccess extends BuildSuccess implements Expected {
         private String key;
 
         ExpectedBuildSuccess(String project, int buildId, String key) {
@@ -185,7 +185,8 @@ public class StateChangePatternTest {
         }
     }
 
-    private interface Expected {
+    @SuppressWarnings("WeakerAccess")
+    public interface Expected {
         String getKey();
     }
 }
