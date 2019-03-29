@@ -4,7 +4,6 @@ import com.espertech.esper.client.EventBean;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
-import org.apache.flink.streaming.util.StreamingMultipleProgramsTestBase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -17,7 +16,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.IsNull.notNullValue;
 
-public class EsperQueryTest extends StreamingMultipleProgramsTestBase implements Serializable {
+public class EsperQueryTest  implements Serializable {
 
     private static final long serialVersionUID = 3151045298871771992L;
     private static List<TestEvent> result;
